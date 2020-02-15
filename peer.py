@@ -21,12 +21,26 @@ class Peers:
         res.add(self.me)
         return res
 
+    @classmethod
+    def get_chain(cls, peer):
+        response = requests.get('{}server/chain'.format(peer))
+        return response.json()['length'], response.json()['chain']
 
-def broadcast_to_peers(new_peer, peers):
-    headers = {'Content-Type': "application/json"}
-    for peer in peers:
-        data = {"Node_address": new_peer}
-        response = requests.post(peer + "server/register_with", data=json.dumps(data), headers=headers)
+    @classmethod
+    def add_block(cls, peer, block):
+        url = "{}server/add_block".format(peer)
+        headers = {'Content-Type': "application/json"}
+        response = requests.post(url, data=json.dumps(block.__dict__, sort_keys=True), headers=headers)
+        if response.status_code != 200:
+            print('add block to peer {} failed'.format(peer))
+
+    def broadcast_new_peer(self, new_peer):
+        headers = {'Content-Type': "application/json"}
+        for peer in self.peers:
+            data = {"Node_address": new_peer}
+            response = requests.post(peer + "server/register_with", data=json.dumps(data), headers=headers)
+            if response.status_code != 200:
+                print('broadcast to peer {} failed'.format(peer))
 
 
 peers = Peers()

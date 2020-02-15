@@ -2,20 +2,25 @@ import json
 import time
 from hashlib import sha256
 
+from peer import Peers
+
 
 class Block:
-    def __init__(self, index, transactions, timestamp, previous_hash):
+    def __init__(self, index, transactions, timestamp, prev_hash, nonce=0):
         """
         Constructor for the `Block` class.
         :param index: Unique ID of the block.
         :param transactions: List of transactions.
         :param timestamp: Time of generation of the block.
-        :param previous_hash: Hash of the previous block in the chain which this block is part of.
+        :param prev_hash: Hash of the previous block in the chain which this block is part of.
         """
         self.index = index
         self.transactions = transactions
         self.timestamp = timestamp
-        self.previous_hash = previous_hash
+        self.prev_hash = prev_hash
+        self.nonce = nonce
+        self.prev_block = None
+        self.hash = None
 
     def compute_hash(self):
         """
@@ -36,7 +41,6 @@ class Blockchain:
         """
         self.unconfirmed_transactions = []  # data yet to get into blockchain
         self.chain = []
-        self.create_genesis_block()
 
     def refresh(self, blockchain):
         """
@@ -56,6 +60,7 @@ class Blockchain:
         genesis_block = Block(0, [], time.time(), "0")
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
+        return self
 
     @property
     def last_block(self):
@@ -92,15 +97,17 @@ class Blockchain:
         if previous_hash != block.previous_hash:
             return False
 
-        if not self.is_valid_proof(block, computed_hash):
+        if not Blockchain.is_valid_hash_value(block, computed_hash):
             return False
 
         block.hash = computed_hash
         self.chain.append(block)
         return True
 
-    def is_valid_proof(self, block, computed_hash):
+    @classmethod
+    def is_valid_hash_value(cls, block, computed_hash):
         """
+        proof of work.
         Check if block_hash is valid hash of block and satisfies
         the difficulty criteria.
         """
@@ -124,12 +131,63 @@ class Blockchain:
         new_block = Block(index=last_block.index + 1,
                           transactions=self.unconfirmed_transactions,
                           timestamp=time.time(),
-                          previous_hash=last_block.hash)
+                          prev_hash=last_block.hash)
 
         proof = self.proof_of_work(new_block)
         self.add_block(new_block, proof)
         self.unconfirmed_transactions = []
         return new_block.index
 
+    @classmethod
+    def check_chain_validity(cls, chain):
+        """
+        A helper method to check if the entire blockchain is valid.
+        """
+        result = True
+        previous_hash = '0'
 
-blockchain = Blockchain()
+        # Iterate through every block
+        for block in chain:
+            block_hash = block.hash
+
+            if not cls.is_valid_hash_value(block, block_hash) or \
+                    previous_hash != block.previous_hash:
+                result = False
+                break
+
+            previous_hash = block_hash
+
+        return result
+
+    def consensus(self, peers):
+        """
+        Our naive consnsus algorithm. If a longer valid chain is
+        found, our chain is replaced with it.
+        """
+
+        longest_chain = None
+        current_len = len(self.chain)
+
+        for peer in peers:
+            length, chain = Peers.get_chain(peer)
+            if length > current_len and blockchain.check_chain_validity(chain):
+                current_len = length
+                longest_chain = chain
+
+        if longest_chain:
+            self.chain = longest_chain
+            return True
+
+        return False
+
+    def announce_block(self, peers):
+        """
+            A function to announce to the network once a block has been mined.
+            Other blocks can simply verify the proof of work and add it to their
+            respective chains.
+            """
+        for peer in peers:
+            Peers.add_block(peer, self.last_block)
+
+
+blockchain = Blockchain().create_genesis_block()

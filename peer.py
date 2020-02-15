@@ -15,7 +15,7 @@ class Peers:
     def generate_peers(self):
         """
         exclude self
-        :return:
+        :return: set
         """
         res = copy.copy(self.peers)
         res.add(self.me)

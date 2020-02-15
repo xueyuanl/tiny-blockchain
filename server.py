@@ -37,6 +37,16 @@ def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
 
 
+@server.route('/chain', methods=['GET'])
+def get_chain():
+    chain_data = []
+    for block in blockchain.chain:
+        chain_data.append(block.__dict__)
+    return json.dumps({"length": len(chain_data),
+                       "chain": chain_data,
+                       "peers": list(peers.generate_peers())})
+
+
 @server.route('/register_with', methods=['POST'])
 def register_with_existing_node():
     """
@@ -44,7 +54,7 @@ def register_with_existing_node():
     register current node with the remote node specified in the
     request, and sync the blockchain as well with the remote node.
     """
-    new_peer_addr = request.get_json()['node_address']
+    new_peer_addr = request.get_json()['node_address']  # sample: http://192.168.1.2:2008/
     if not new_peer_addr:
         return 'Invalid data', 400
     if new_peer_addr in peers.peers:
@@ -52,39 +62,16 @@ def register_with_existing_node():
 
     peers.me = request.host_url
 
-    data = {'peers': peers.generate_peers()}
+    data = {'peers': list(peers.generate_peers()),
+            'chain': get_chain()}
     headers = {'Content-Type': 'application/json'}
 
-    # Make a request to register with remote node and obtain information
+    # send to client, to help the client update the peers list and build the blockchain
     response = requests.post(new_peer_addr + '/client/register_node', data=json.dumps(data), headers=headers)
 
     if response.status_code != 200:
         return response.content, response.status_code
 
-    # update chain and the peers
-    # chain_dump = response.json()['chain']
-    # tmp_blockchain = create_chain_from_dump(chain_dump)
-    # blockchain.refresh(tmp_blockchain)
-    broadcast_to_peers(new_peer_addr, peers.generate_peers())
+    broadcast_to_peers(new_peer_addr, peers.peers)
     peers.add_peers(new_peer_addr)
     return 'Registration successful', 200
-
-
-def create_chain_from_dump(chain_dump):
-    # the length of new peer's blockchain ls less than self blockchain
-    if len(chain_dump) < len(blockchain.chain):
-        return blockchain
-    new_blockchain = Blockchain()
-    for idx, block_data in enumerate(chain_dump):
-        block = Block(block_data['index'],
-                      block_data['transactions'],
-                      block_data['timestamp'],
-                      block_data['previous_hash'])
-        proof = block_data['hash']
-        if idx > 0:
-            added = new_blockchain.add_block(block, proof)
-            if not added:
-                raise Exception('The chain dump is tampered!!')
-        else:  # the block is a genesis block, no verification needed
-            new_blockchain.chain.append(block)
-    return new_blockchain

@@ -133,4 +133,3 @@ class Blockchain:
 
 
 blockchain = Blockchain()
-peers = set()

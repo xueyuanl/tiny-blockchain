@@ -174,9 +174,9 @@ class Blockchain:
         longest_chain = None
         current_len = len(self.chain)
         logger.info('Current chain length is {}'.format(current_len))
-        for peer in peers:
+        for peer in peers.vaules():
             length, chain = call_get_chain(peer)
-            logger.info('Get chain from peer {}'.format(peer))
+            logger.info('Get chain from peer {}'.format(peer.__dict__))
             if length > current_len and blockchain.check_chain_validity(chain):
                 current_len = length
                 longest_chain = chain
@@ -194,10 +194,10 @@ class Blockchain:
             Other blocks can simply verify the proof of work and add it to their
             respective chains.
             """
-        for peer in peers:
+        for peer in peers.values():
             response = call_add_block(peer, self.last_block)
             if response.status_code != 200:
-                print('add block to peer {} failed'.format(peer))
+                print('add block to peer {} failed'.format(peer.__dict__))
 
 
 blockchain = Blockchain().create_genesis_block()

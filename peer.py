@@ -31,7 +31,7 @@ class Peers:
         """
         res = []
         res.append(self.me.to_dict())
-        res.append([self.peers[p].to_dict() for p in self.peers])
+        res.extend([self.peers[p].to_dict() for p in self.peers])
         return res
 
     def broadcast_new_peer(self, new_peer):

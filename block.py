@@ -2,6 +2,7 @@ import json
 import time
 from hashlib import sha256
 
+from log import logger
 from peer import Peers
 
 
@@ -48,13 +49,14 @@ class Blockchain:
         :param blockchain:
         :return:
         """
+        logger.info('Update the blockchain with given, {}'.format(blockchain))
         self.unconfirmed_transactions = blockchain.unconfirmed_transactions
         self.chain = blockchain.chain
 
     def create_genesis_block(self):
         """
         A function to generate genesis block and appends it to
-        the chain. The block has index 0, previous_hash as 0, and
+        the chain. The block has index 0, prev_hash as 0, and
         a valid hash.
         """
         genesis_block = Block(0, [], time.time(), "0")
@@ -89,18 +91,20 @@ class Blockchain:
         A function that adds the block to the chain after verification.
         Verification includes:
         * Checking if the proof is valid.
-        * The previous_hash referred in the block and the hash of a latest block
+        * The prev_hash referred in the block and the hash of a latest block
           in the chain match.
         """
-        previous_hash = self.last_block.hash
 
-        if previous_hash != block.previous_hash:
+        prev_hash = self.last_block.hash
+
+        if prev_hash != block.prev_hash:
             return False
 
         if not Blockchain.is_valid_hash_value(block, computed_hash):
             return False
-
+        logger.info('Verified the hash value {}'.format(computed_hash))
         block.hash = computed_hash
+        logger.info('Add a block {} with hash value {}'.format(block, computed_hash))
         self.chain.append(block)
         return True
 
@@ -115,6 +119,7 @@ class Blockchain:
                 computed_hash == block.compute_hash())
 
     def add_new_transaction(self, transaction):
+        logger.info('add a new transaction {}'.format(transaction))
         self.unconfirmed_transactions.append(transaction)
 
     def mine(self):
@@ -124,6 +129,7 @@ class Blockchain:
         and figuring out proof of work.
         """
         if not self.unconfirmed_transactions:
+            logger.info('no transactions to mine.')
             return False
 
         last_block = self.last_block
@@ -136,7 +142,7 @@ class Blockchain:
         proof = self.proof_of_work(new_block)
         self.add_block(new_block, proof)
         self.unconfirmed_transactions = []
-        return new_block.index
+        return new_block
 
     @classmethod
     def check_chain_validity(cls, chain):
@@ -144,18 +150,18 @@ class Blockchain:
         A helper method to check if the entire blockchain is valid.
         """
         result = True
-        previous_hash = '0'
+        prev_hash = '0'
 
         # Iterate through every block
         for block in chain:
             block_hash = block.hash
 
             if not cls.is_valid_hash_value(block, block_hash) or \
-                    previous_hash != block.previous_hash:
+                    prev_hash != block.prev_hash:
                 result = False
                 break
 
-            previous_hash = block_hash
+            prev_hash = block_hash
 
         return result
 
@@ -167,12 +173,14 @@ class Blockchain:
 
         longest_chain = None
         current_len = len(self.chain)
-
+        logger.info('Current chain length is {}'.format(current_len))
         for peer in peers:
             length, chain = Peers.get_chain(peer)
+            logger.info('Get chain from peer {}'.format(peer))
             if length > current_len and blockchain.check_chain_validity(chain):
                 current_len = length
                 longest_chain = chain
+                logger.info('Find a longer chain, length is {}'.format(current_len))
 
         if longest_chain:
             self.chain = longest_chain

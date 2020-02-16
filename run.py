@@ -1,6 +1,7 @@
 from flask import Flask
 
 from client import client
+from log import logger
 from server import server
 
 app = Flask(__name__)
@@ -9,6 +10,7 @@ app.register_blueprint(client, url_prefix='/client')
 
 
 def main():
+    logger.info('start...')
     app.run(host='0.0.0.0', port=2008, debug=True)
 
 

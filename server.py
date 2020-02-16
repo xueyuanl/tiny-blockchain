@@ -4,7 +4,7 @@ from flask import request
 
 from block import *
 from log import logger
-from peer import peers
+from peer import peers, Peer
 
 server = Blueprint('server', __name__)
 
@@ -20,7 +20,7 @@ def new_transaction():
             return 'Invalid transaction data', 404
 
     tx_data['timestamp'] = time.time()
-    logger.info('Get a new transaction {}'.format(tx_data))
+    logger.info('Come to add transaction')
     blockchain.add_new_transaction(tx_data)
 
     return 'Success', 201
@@ -62,22 +62,24 @@ def register_with_existing_node():
     register current node with the remote node specified in the
     request, and sync the blockchain as well with the remote node.
     """
-    new_peer_addr = request.get_json()['node_address']  # sample: http://192.168.1.2:2008/
-    if not new_peer_addr:
-        return 'Invalid data', 400
-    logger.info('Receive a new peer {} register request'.format(new_peer_addr))
-    if new_peer_addr in peers.peers:
+    ipv4 = request.get_json()['ipv4']
+    port = request.get_json()['port']
+    new_peer_addr = request.get_json()
+    logger.info('Receive a new peer {} register request'.format(ipv4))
+    if ipv4 in peers.peers:
         logger.info('New peer is already registered')
         return 'Already registered', 200
 
-    peers.me = request.host_url
+    socket = request.host_url[7:-1].split(':')
+    peers.me = Peer(socket[0], socket[1])
 
-    data = {'peers': list(peers.generate_peers()),
+    data = {'peers': peers.generate_peers(),
             'chain': [block.__dict__ for block in blockchain.chain]}
     headers = {'Content-Type': 'application/json'}
     logger.info('Send back to new peer, the data is {}'.format(data))
     # send to client, to help the client update the peers list and build the blockchain
-    response = requests.post(new_peer_addr + '/client/register_node', data=json.dumps(data), headers=headers)
+    response = requests.post('http://' + ipv4 + ':' + port + '/client/register_node', data=json.dumps(data),
+                             headers=headers)
 
     if response.status_code != 200:
         logger.info('Fail to get response from new peer, status code {}'.format(response.status_code))

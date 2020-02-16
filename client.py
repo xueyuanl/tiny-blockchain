@@ -12,10 +12,10 @@ def register_new_peers():
     # The host address to the peer node
     new_peers = request.get_json()["peers"]
     logger.info('Get a peers list {}'.format(new_peers))
-    for n in new_peers:
-        if n not in peers.peers:
-            logger.info('register a new peer {}'.format(n))
-            peers.add_peers(n)
+    for peer in new_peers:
+        if peer['ipv4'] not in peers.peers:
+            logger.info('register a new peer {}'.format(peer))
+            peers.add_peers(peer)
 
     chain_dump = request.get_json()['chain']
     logger.info('Get a chain dict list {}'.format(chain_dump))

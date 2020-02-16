@@ -49,7 +49,7 @@ class Blockchain:
         :param blockchain:
         :return:
         """
-        logger.info('Update the blockchain with given, {}'.format(blockchain))
+        logger.info('Update the blockchain with given, {}'.format(blockchain.__dict__))
         self.unconfirmed_transactions = blockchain.unconfirmed_transactions
         self.chain = blockchain.chain
 

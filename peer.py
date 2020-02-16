@@ -20,9 +20,9 @@ class Peers:
         self.me = None
         self.peers = {}
 
-    def add_peers(self, new_peers):
-        logger.info('Add peer {} into peers dict'.format(new_peers))
-        self.peers[new_peers['ipv4']] = Peer(new_peers['ipv4'], new_peers['port'])
+    def add_peer(self, new_peer):
+        logger.info('Add peer {} into peers dict'.format(new_peer))
+        self.peers[new_peer['ipv4']] = Peer(new_peer['ipv4'], new_peer['port'])
 
     def generate_peers(self):
         """

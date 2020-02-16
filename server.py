@@ -89,7 +89,7 @@ def register_with_existing_node():
         return response.content, response.status_code
 
     peers.broadcast_new_peer(new_peer_dict)
-    peers.add_peers(new_peer_dict)
+    peers.add_peer(new_peer_dict)
     return 'Registration successful', 200
 
 

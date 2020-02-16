@@ -7,24 +7,34 @@ from peer import peers
 CLIENT_URL_PREFIX = '/client'
 client = Blueprint(CLIENT_URL_PREFIX, __name__)
 
-REGISTER_CALLBACK = '/register_node'
+REGISTER_CALLBACK = '/register_callback'
+NEW_PEER = '/new_peer'
 
 
 @client.route(REGISTER_CALLBACK, methods=['POST'])
-def register_new_peers():
+def register_callback():
     # The host address to the peer node
     new_peers = request.get_json()["peers"]
     logger.info('Get a peers list {}'.format(new_peers))
     for peer in new_peers:
         if peer['ipv4'] not in peers.peers:
             logger.info('register a new peer {}'.format(peer))
-            peers.add_peers(peer)
+            peers.add_peer(peer)
 
     chain_dump = request.get_json()['chain']
     logger.info('Get a chain dict list {}'.format(chain_dump))
     tmp_blockchain = create_chain_from_dump(chain_dump)
     blockchain.refresh(tmp_blockchain)
     # Return the blockchain to the newly registered node so that it can sync
+    return 'Update successful', 200
+
+
+@client.route(NEW_PEER, methods=['POST'])
+def add_new_peer():
+    peer = request.get_json()
+    logger.info('Get a peer {}'.format(peer))
+    logger.info('register a new peer {}'.format(peer))
+    peers.add_peer(peer)
     return 'Update successful', 200
 
 

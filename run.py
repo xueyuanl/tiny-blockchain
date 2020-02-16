@@ -1,12 +1,12 @@
 from flask import Flask
 
-from client import client
+from client import client, CLIENT_URL_PREFIX
 from log import logger
-from server import server
+from server import server, SERVER_URL_PREFIX
 
 app = Flask(__name__)
-app.register_blueprint(server, url_prefix='/server')
-app.register_blueprint(client, url_prefix='/client')
+app.register_blueprint(server, url_prefix=SERVER_URL_PREFIX)
+app.register_blueprint(client, url_prefix=CLIENT_URL_PREFIX)
 
 
 def main():

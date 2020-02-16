@@ -1,15 +1,23 @@
-import requests
 from flask import Blueprint
 from flask import request
 
 from block import *
 from log import logger
 from peer import peers, Peer
+from utils import call_register_callback
 
-server = Blueprint('server', __name__)
+SERVER_URL_PREFIX = '/server'
+server = Blueprint(SERVER_URL_PREFIX, __name__)
+
+NEW_TRANSACTION = '/new_transaction'
+PENDING_TRANSACTION = '/pending_tx'
+MINE = '/mine'
+CHAIN = '/chain'
+REGISTER_NODE = '/register_with'
+NEW_BLOCK = '/add_block'
 
 
-@server.route('/new_transaction', methods=['POST'])
+@server.route(NEW_TRANSACTION, methods=['POST'])
 def new_transaction():
     tx_data = request.get_json()
     required_fields = ['author', 'content']
@@ -26,27 +34,27 @@ def new_transaction():
     return 'Success', 201
 
 
-@server.route('/mine', methods=['GET'])
+@server.route(MINE, methods=['GET'])
 def mine_unconfirmed_transactions():
     mined_block = blockchain.mine()
     if not mined_block:
         return 'No transactions to mine'
     logger.info('Mined a new block {}, try to consensus with other peers.'.format(mined_block))
     # Making sure we have the longest chain before announcing to the network
-    if blockchain.consensus(peers):
+    if blockchain.consensus(peers.peers):
         logger.info('Got a longer chain from other peers, skip to mine.')
         return 'No transactions to mine'
     # we mined a block, and we have the longest blockchain, so announce to the network
-
+    blockchain.announce_block(peers.peers)
     return 'Block {} is mined.'.format(mined_block)
 
 
-@server.route('/pending_tx')
+@server.route(PENDING_TRANSACTION)
 def get_pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
 
 
-@server.route('/chain', methods=['GET'])
+@server.route(CHAIN, methods=['GET'])
 def get_chain():
     chain_data = []
     for block in blockchain.chain:
@@ -55,7 +63,7 @@ def get_chain():
                        "chain": chain_data})
 
 
-@server.route('/register_with', methods=['POST'])
+@server.route(REGISTER_NODE, methods=['POST'])
 def register_with_existing_node():
     """
     Internally calls the `register_node` endpoint to
@@ -63,8 +71,7 @@ def register_with_existing_node():
     request, and sync the blockchain as well with the remote node.
     """
     ipv4 = request.get_json()['ipv4']
-    port = request.get_json()['port']
-    new_peer_addr = request.get_json()
+    new_peer_dict = request.get_json()
     logger.info('Receive a new peer {} register request'.format(ipv4))
     if ipv4 in peers.peers:
         logger.info('New peer is already registered')
@@ -75,25 +82,21 @@ def register_with_existing_node():
 
     data = {'peers': peers.generate_peers(),
             'chain': [block.__dict__ for block in blockchain.chain]}
-    headers = {'Content-Type': 'application/json'}
-    logger.info('Send back to new peer, the data is {}'.format(data))
-    # send to client, to help the client update the peers list and build the blockchain
-    response = requests.post('http://' + ipv4 + ':' + port + '/client/register_node', data=json.dumps(data),
-                             headers=headers)
+    response = call_register_callback(new_peer_dict, data)
 
     if response.status_code != 200:
         logger.info('Fail to get response from new peer, status code {}'.format(response.status_code))
         return response.content, response.status_code
 
-    peers.broadcast_new_peer(new_peer_addr)
-    peers.add_peers(new_peer_addr)
+    peers.broadcast_new_peer(new_peer_dict)
+    peers.add_peers(new_peer_dict)
     return 'Registration successful', 200
 
 
 # endpoint to add a block mined by someone else to
 # the node's chain. The block is first verified by the node
 # and then added to the chain.
-@server.route('/add_block', methods=['POST'])
+@server.route(NEW_BLOCK, methods=['POST'])
 def verify_and_add_block():
     block_data = request.get_json()
     block = Block(block_data["index"],

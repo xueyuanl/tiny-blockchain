@@ -4,10 +4,13 @@ from flask import request
 from block import *
 from peer import peers
 
-client = Blueprint('client', __name__)
+CLIENT_URL_PREFIX = '/client'
+client = Blueprint(CLIENT_URL_PREFIX, __name__)
+
+REGISTER_CALLBACK = '/register_node'
 
 
-@client.route('/register_node', methods=['POST'])
+@client.route(REGISTER_CALLBACK, methods=['POST'])
 def register_new_peers():
     # The host address to the peer node
     new_peers = request.get_json()["peers"]

@@ -3,7 +3,7 @@ import time
 from hashlib import sha256
 
 from log import logger
-from peer import Peers
+from utils import call_add_block, call_get_chain
 
 
 class Block:
@@ -175,7 +175,7 @@ class Blockchain:
         current_len = len(self.chain)
         logger.info('Current chain length is {}'.format(current_len))
         for peer in peers:
-            length, chain = Peers.get_chain(peer)
+            length, chain = call_get_chain(peer)
             logger.info('Get chain from peer {}'.format(peer))
             if length > current_len and blockchain.check_chain_validity(chain):
                 current_len = length
@@ -195,7 +195,9 @@ class Blockchain:
             respective chains.
             """
         for peer in peers:
-            Peers.add_block(peer, self.last_block)
+            response = call_add_block(peer, self.last_block)
+            if response.status_code != 200:
+                print('add block to peer {} failed'.format(peer))
 
 
 blockchain = Blockchain().create_genesis_block()

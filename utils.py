@@ -16,11 +16,10 @@ def call_register_callback(node, data):
 
 
 def call_broadcast_new_peer(new_peer, broadcast_peer):
-    from server import SERVER_URL_PREFIX
-    from client import NEW_PEER
+    from client import CLIENT_URL_PREFIX, NEW_PEER
     headers = {'Content-Type': "application/json"}
     data = {'ipv4': new_peer['ipv4'], 'port': new_peer['port']}
-    url = 'http://{}:{}{}{}'.format(broadcast_peer.ipv4, str(broadcast_peer.port), SERVER_URL_PREFIX, NEW_PEER)
+    url = 'http://{}:{}{}{}'.format(broadcast_peer.ipv4, str(broadcast_peer.port), CLIENT_URL_PREFIX, NEW_PEER)
     logger.info('call url {}'.format(url))
     return requests.post(url, data=json.dumps(data), headers=headers)
 

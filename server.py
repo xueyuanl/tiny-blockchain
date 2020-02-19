@@ -50,7 +50,7 @@ def mine_unconfirmed_transactions():
 
 
 @server.route(PENDING_TRANSACTION)
-def get_pending_tx():
+def pending_tx():
     return json.dumps(blockchain.unconfirmed_transactions)
 
 
